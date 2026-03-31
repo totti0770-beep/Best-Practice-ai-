@@ -18,14 +18,22 @@ The repository currently contains:
 
 No source code, dependencies, tests, or CI/CD configuration exist yet.
 
+### Git History
+
+| Commit | Date | Description |
+|--------|------|-------------|
+| `64ae495` | 2026-03-09 | Initial commit — added README.md |
+| `1bd6c34` | 2026-03-29 | Add CLAUDE.md (AI assistant guidance) |
+| `023931c` | 2026-03-30 | Merge PR #1: claude/add-claude-documentation-3dlx4 → main |
+
 ## Development Branch
 
-Always develop on `claude/add-claude-documentation-3dlx4` unless explicitly instructed otherwise. Never push directly to `main`.
+Always develop on `claude/add-claude-documentation-WBtd1` unless explicitly instructed otherwise. Never push directly to `main`.
 
 ```bash
-git checkout claude/add-claude-documentation-3dlx4
+git checkout claude/add-claude-documentation-WBtd1
 # make changes
-git push -u origin claude/add-claude-documentation-3dlx4
+git push -u origin claude/add-claude-documentation-WBtd1
 ```
 
 ## Git Conventions
