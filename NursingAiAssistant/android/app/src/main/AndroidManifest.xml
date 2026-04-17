@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AndroidManifest.xml
+  NursingAiAssistant — Android application manifest.
+
+  Key settings:
+    android:largeHeap="true"   Required to load large GGUF AI model files into RAM.
+    hardwareAccelerated="true" Improves rendering of the dark-mode UI.
+
+  Permissions:
+    USE_BIOMETRIC / USE_FINGERPRINT  Biometric auth in the Admin Panel.
+    READ/WRITE_EXTERNAL_STORAGE      Allows picking and reading PDF files.
+    CAMERA                           Required by some biometric implementations.
+-->
+<manifest
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  package="com.nursingaiassistant">
+
+  <!-- Storage permissions (PDF upload) -->
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+    android:maxSdkVersion="32" />
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+    android:maxSdkVersion="29" />
+
+  <!-- Android 13+ scoped storage for media -->
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+  <!-- Biometric permissions -->
+  <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+  <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+  <uses-permission android:name="android.permission.CAMERA" />
+
+  <!-- Internet permission intentionally omitted — this is an Air-gapped app -->
+
+  <application
+    android:name=".MainApplication"
+    android:label="@string/app_name"
+    android:icon="@mipmap/ic_launcher"
+    android:roundIcon="@mipmap/ic_launcher_round"
+    android:allowBackup="false"
+    android:largeHeap="true"
+    android:hardwareAccelerated="true"
+    android:theme="@style/AppTheme">
+
+    <activity
+      android:name=".MainActivity"
+      android:label="@string/app_name"
+      android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+      android:launchMode="singleTask"
+      android:windowSoftInputMode="adjustResize"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+
+</manifest>
