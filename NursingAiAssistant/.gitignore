@@ -1,0 +1,44 @@
+# React Native generated
+node_modules/
+.bundle/
+.cache/
+
+# Android build artifacts
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
+# iOS build artifacts
+ios/Pods/
+ios/build/
+*.xcworkspace/
+*.xcuserstate
+
+# AI model files — too large for git (add to Git LFS or distribute separately)
+android/app/src/main/assets/models/*.gguf
+ios/assets/models/*.gguf
+
+# Environment & secrets
+.env
+.env.*
+*.keystore
+!debug.keystore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage/

@@ -1,0 +1,8 @@
+# Place the GGUF model file here:
+#   nursing_model.gguf
+#
+# Recommended: Phi-3-mini-4k-instruct-q4.gguf (~2 GB) or any Q4_K_M quantised
+# medical/general model compatible with llama.rn.
+#
+# This file is excluded from git via .gitignore due to its large size.
+# Distribute it separately (e.g. via a secure internal download link).

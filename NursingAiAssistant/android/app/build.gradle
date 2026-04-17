@@ -1,0 +1,75 @@
+/**
+ * android/app/build.gradle
+ * App-level Gradle build script for NursingAiAssistant.
+ *
+ * Key settings:
+ *   - minSdkVersion 24   → Required for BiometricPrompt API
+ *   - largeHeap true     → Declared in AndroidManifest; allows GGUF model in RAM
+ *   - assets.srcDirs     → Includes the models/ folder in the APK assets
+ */
+
+apply plugin: "com.android.application"
+apply plugin: "com.facebook.react"
+apply plugin: "org.jetbrains.kotlin.android"
+
+react {
+    // Use Hermes JS engine for better performance and lower memory usage
+    hermesEnabled = true
+}
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace "com.nursingaiassistant"
+
+    defaultConfig {
+        applicationId "com.nursingaiassistant"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            // Configure release signing via environment variables or a local keystore
+            signingConfig signingConfigs.debug  // Replace with release keystore before shipping
+        }
+    }
+
+    // Include the models/ directory in the APK assets bundle
+    sourceSets {
+        main {
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+}
+
+dependencies {
+    // React Native
+    implementation("com.facebook.react:react-android")
+    implementation("com.facebook.react:hermes-android")
+
+    // SQLCipher — provides transparent AES-256 encryption for SQLite
+    implementation "net.zetetic:android-database-sqlcipher:4.5.4"
+    implementation "androidx.sqlite:sqlite:2.4.0"
+
+    // Biometrics
+    implementation "androidx.biometric:biometric:1.2.0-alpha05"
+}
