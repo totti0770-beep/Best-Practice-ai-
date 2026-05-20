@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "منصة CNPV",
+    "slug": "cnpv-platform",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "cnpv",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2563eb"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563eb"
+      },
+      "package": "sa.cnpv.platform"
+    },
+    "ios": {
+      "bundleIdentifier": "sa.cnpv.platform",
+      "supportsTablet": false
+    },
+    "plugins": ["expo-router", "expo-secure-store"]
+  }
+}

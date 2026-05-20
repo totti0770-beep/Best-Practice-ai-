@@ -1,0 +1,148 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: cnpv-postgres
+    environment:
+      POSTGRES_DB: cnpv_db
+      POSTGRES_USER: cnpv_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cnpv_user -d cnpv_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cnpv-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: cnpv-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme} --save 60 1
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - cnpv-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: cnpv-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme_minio}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cnpv-network
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: cnpv-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-changeme_minio};
+        mc mb --ignore-existing local/cnpv-documents;
+        mc anonymous set none local/cnpv-documents;
+        echo 'MinIO bucket ready';
+      "
+    networks:
+      - cnpv-network
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: cnpv-backend
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://cnpv_user:${POSTGRES_PASSWORD:-changeme}@postgres:5432/cnpv_db
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-changeme_minio}
+      APP_PORT: 3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./apps/backend/src:/app/src
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - cnpv-network
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: development
+    container_name: cnpv-web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/v1
+      NEXT_PUBLIC_APP_NAME: "منصة CNPV"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web/src:/app/src
+    depends_on:
+      - backend
+    networks:
+      - cnpv-network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cnpv-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@cnpv.local
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    profiles:
+      - tools
+    networks:
+      - cnpv-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  cnpv-network:
+    name: cnpv-network
