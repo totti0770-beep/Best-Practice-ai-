@@ -18,14 +18,22 @@ The repository currently contains:
 
 No source code, dependencies, tests, or CI/CD configuration exist yet.
 
+### Git History
+
+| Commit | Date | Description |
+|--------|------|-------------|
+| `64ae495` | 2026-03-09 | Initial commit — added README.md |
+| `1bd6c34` | 2026-03-29 | Add CLAUDE.md (AI assistant guidance) |
+| `023931c` | 2026-03-30 | Merge PR #1: claude/add-claude-documentation-3dlx4 → main |
+
 ## Development Branch
 
-Always develop on `claude/add-claude-documentation-3dlx4` unless explicitly instructed otherwise. Never push directly to `main`.
+Always develop on `claude/add-claude-documentation-WBtd1` unless explicitly instructed otherwise. Never push directly to `main`.
 
 ```bash
-git checkout claude/add-claude-documentation-3dlx4
+git checkout claude/add-claude-documentation-WBtd1
 # make changes
-git push -u origin claude/add-claude-documentation-3dlx4
+git push -u origin claude/add-claude-documentation-WBtd1
 ```
 
 ## Git Conventions
@@ -79,13 +87,32 @@ scripts/      # Utility scripts
 .github/      # GitHub Actions workflows
 ```
 
-## Testing (To Be Established)
+## Testing
 
-When a test framework is chosen, document:
-- How to run tests: `<command>`
-- How to run a single test file
-- Test file naming conventions
-- Coverage requirements
+See `docs/test-coverage-analysis.md` for the full coverage analysis and priority areas.
+
+### Conventions (apply when a framework is chosen)
+
+- Place all tests under `tests/`, mirroring the `src/` structure
+- Name test files `test_<module>.py` (Python) or `<module>.test.ts` (TypeScript)
+- Each public function must have at least one unit test
+- Security boundary inputs must have explicit tests
+
+### Running Tests (update when framework is confirmed)
+
+```bash
+# Python / pytest
+pytest --cov=src --cov-fail-under=80
+
+# TypeScript / jest
+npx jest --coverage
+```
+
+### Coverage Requirements
+
+- Minimum **80% line coverage** enforced in CI
+- All public API entry points must be covered
+- Every error/exception branch must have a test
 
 ## CI/CD (To Be Established)
 
