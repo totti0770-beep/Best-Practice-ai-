@@ -17,3 +17,8 @@
 
 # Crypto
 -keep class org.bouncycastle.** { *; }
+
+# PDFBox-Android (Tom Roush) — PDF text extraction
+-keep class com.tom_roush.pdfbox.** { *; }
+-keep class com.tom_roush.fontbox.** { *; }
+-dontwarn com.tom_roush.pdfbox.**

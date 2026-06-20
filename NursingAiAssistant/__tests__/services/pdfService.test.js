@@ -4,6 +4,11 @@
  */
 
 // Mock native modules that cannot run in a Node.js test environment
+jest.mock('react-native', () => ({
+  NativeModules: {
+    PdfExtractorModule: { extractPages: jest.fn() },
+  },
+}));
 jest.mock('react-native-fs', () => ({
   readFile: jest.fn(),
   stat: jest.fn(),
@@ -19,7 +24,12 @@ jest.mock('../../src/services/auditService', () => ({
   addAuditLog: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { createChunks, cleanText } from '../../src/services/pdfService';
+import { NativeModules } from 'react-native';
+import RNFS from 'react-native-fs';
+import { insertKnowledgeChunk } from '../../src/database/db';
+import { createChunks, cleanText, processSecurePDF } from '../../src/services/pdfService';
+
+const mockExtractPages = NativeModules.PdfExtractorModule.extractPages;
 
 // ── createChunks ─────────────────────────────────────────────────────────────
 
@@ -83,5 +93,60 @@ describe('cleanText', () => {
 
   it('handles empty string', () => {
     expect(cleanText('')).toBe('');
+  });
+});
+
+// ── processSecurePDF (native extraction) ─────────────────────────────────────
+
+describe('processSecurePDF — native PDF extraction', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    RNFS.stat.mockResolvedValue({ size: 1024 });
+    RNFS.readFile.mockResolvedValue('base64data');
+  });
+
+  it('extracts pages via the native module and stores chunks', async () => {
+    mockExtractPages.mockResolvedValue([
+      { pageNumber: 1, text: 'Ceftriaxone 1g IV reconstitution guide.' },
+      { pageNumber: 2, text: 'Infuse over 30 minutes. Monitor for reactions.' },
+    ]);
+
+    const result = await processSecurePDF('/cache/drug.pdf', 'Drug.pdf', 1);
+
+    expect(mockExtractPages).toHaveBeenCalledWith('/cache/drug.pdf');
+    expect(result.chunksInserted).toBe(2);
+    expect(insertKnowledgeChunk).toHaveBeenCalledTimes(2);
+    const firstChunk = insertKnowledgeChunk.mock.calls[0][0];
+    expect(firstChunk.content).toContain('Ceftriaxone');
+    expect(firstChunk.pageNumber).toBe(1);
+    expect(firstChunk.sourceName).toBe('Drug.pdf');
+  });
+
+  it('throws when the PDF yields no extractable text', async () => {
+    mockExtractPages.mockResolvedValue([]);
+    await expect(
+      processSecurePDF('/cache/scanned.pdf', 'Scanned.pdf', 1)
+    ).rejects.toThrow(/no extractable text/i);
+  });
+
+  it('skips blank pages without inserting empty chunks', async () => {
+    mockExtractPages.mockResolvedValue([
+      { pageNumber: 1, text: '   ' },
+      { pageNumber: 2, text: 'Real clinical content here.' },
+    ]);
+
+    const result = await processSecurePDF('/cache/mixed.pdf', 'Mixed.pdf', 2);
+
+    expect(result.chunksInserted).toBe(1);
+    expect(insertKnowledgeChunk).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects files over the size limit before extraction', async () => {
+    RNFS.stat.mockResolvedValue({ size: 100 * 1024 * 1024 });
+    await expect(
+      processSecurePDF('/cache/huge.pdf', 'Huge.pdf', 1)
+    ).rejects.toThrow(/size limit/i);
+    expect(mockExtractPages).not.toHaveBeenCalled();
   });
 });

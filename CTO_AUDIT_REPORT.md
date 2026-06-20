@@ -80,6 +80,7 @@ The application is **merge-ready** from a code quality and security standpoint. 
 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
+| ~~SEC-00~~ | ~~HIGH~~ | ~~PDF extraction is placeholder~~ | RESOLVED — native PDFBox extraction implemented |
 | SEC-01 | HIGH | iOS Keystore not implemented — falls back to dev key | Documented; blocks iOS release only |
 | SEC-02 | MEDIUM | Console.error in production may leak debug info via logcat | Advisory; consider conditional logging |
 | SEC-03 | MEDIUM | Sentry PII scrubbing doesn't cover breadcrumb data | Advisory; low risk since Sentry is optional |
@@ -169,11 +170,16 @@ The application is **merge-ready** from a code quality and security standpoint. 
 
 ### P0 — Blocks Clinical Deployment
 
-| # | Gap | Effort | Owner |
-|---|---|---|---|
-| 1 | Implement real PDF text extraction (PDFBox or pdf.js) | 2-3 days | Engineering |
-| 2 | Bundle or distribute GGUF model (~2.2 GB) | 1 day | Engineering |
-| 3 | Clinical validation by licensed pharmacist | 2-3 days | Clinical team |
+| # | Gap | Effort | Owner | Status |
+|---|---|---|---|---|
+| 1 | ~~Implement real PDF text extraction (PDFBox or pdf.js)~~ | 2-3 days | Engineering | **DONE** — native PdfExtractorModule (Apache PDFBox) |
+| 2 | Bundle or distribute GGUF model (~2.2 GB) | 1 day | Engineering | Open |
+| 3 | Clinical validation by licensed pharmacist | 2-3 days | Clinical team | Open |
+
+**Update (2026-06-20):** P0 #1 resolved. Real on-device PDF text extraction is now
+implemented via the native `PdfExtractorModule` (Apache PDFBox / Tom Roush Android port),
+replacing the placeholder. Page-by-page text is extracted with no network access,
+preserving the air-gapped design. Verified by 4 new unit tests + updated E2E pipeline tests.
 
 ### P1 — Should Fix Before Pilot
 

@@ -40,7 +40,25 @@ jest.mock('react-native-localize', () => ({
 }));
 
 jest.mock('react-native', () => ({
-  NativeModules: {},
+  NativeModules: {
+    PdfExtractorModule: {
+      // Returns two pages of realistic clinical text for the pipeline to chunk.
+      extractPages: jest.fn().mockResolvedValue([
+        {
+          pageNumber: 1,
+          text:
+            'Ceftriaxone IV Administration Guide. Preparation: Reconstitute 1g ' +
+            'vial with 10mL sterile water for injection. Compatible with 0.9% NaCl.',
+        },
+        {
+          pageNumber: 2,
+          text:
+            'IV Infusion Rate: Administer over 30 minutes. Maximum concentration ' +
+            '40 mg/mL. Monitor for hypersensitivity during the first 30 minutes.',
+        },
+      ]),
+    },
+  },
   Platform: { OS: 'android' },
   I18nManager: { isRTL: false, forceRTL: jest.fn(), allowRTL: jest.fn() },
 }));
@@ -410,20 +428,15 @@ describe('RAG Pipeline — End-to-End Integration', () => {
 
   describe('Stage 5: Full Pipeline — PDF Upload → AI Response', () => {
     it('completes full cycle: upload PDF → ask question → get cited answer', async () => {
-      // Step 1: Upload PDF
+      // Step 1: Upload PDF — native extractor returns real clinical text
       RNFS.readFile.mockResolvedValue(SAMPLE_PDF_BASE64);
       const upload = await processSecurePDF('/cache/pharmacy.pdf', 'Pharmacy_Ref.pdf', 1);
       expect(upload.chunksInserted).toBeGreaterThan(0);
 
-      // Step 2: Inject realistic chunk (placeholder extractor stores base64 segments)
-      db.__store.knowledge.push({
-        category_id: 1,
-        content: 'Ceftriaxone IV: Reconstitute 1g in 10mL. Infuse over 30 min.',
-        source_name: 'Pharmacy_Ref.pdf',
-        page_number: 12,
-        checksum: upload.checksum,
-        created_at: new Date().toISOString(),
-      });
+      // Step 2: The extracted content is now searchable — no manual injection needed
+      const stored = db.__store.knowledge.filter(r => r.source_name === 'Pharmacy_Ref.pdf');
+      expect(stored.length).toBe(upload.chunksInserted);
+      expect(stored.some(r => r.content.includes('Ceftriaxone'))).toBe(true);
 
       // Step 3: Release stale LLM context and set up fresh mock
       const { releaseLlama } = require('../../src/services/llamaService');
@@ -431,11 +444,11 @@ describe('RAG Pipeline — End-to-End Integration', () => {
       setupMockLLM('Reconstitute Ceftriaxone 1g with 10mL sterile water. IV over 30 min.');
       const response = await generateSecureResponse('Ceftriaxone preparation', 1);
 
-      // Step 4: Verify full response chain
+      // Step 4: Verify full response chain with real extracted citation
       expect(response.rejected).toBe(false);
       expect(response.answer).toContain('Ceftriaxone');
       expect(response.source).toBe('Pharmacy_Ref.pdf');
-      expect(response.page).toBe(12);
+      expect(response.page).toBeGreaterThanOrEqual(1);
     });
 
     it('multiple PDFs across categories maintain isolation', async () => {

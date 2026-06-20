@@ -11,6 +11,7 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
 import com.nursingaiassistant.modules.KeystorePackage
+import com.nursingaiassistant.modules.PdfExtractorPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -20,6 +21,7 @@ class MainApplication : Application(), ReactApplication {
                 val packages = PackageList(this).packages.toMutableList()
                 // Register custom native modules
                 packages.add(KeystorePackage())
+                packages.add(PdfExtractorPackage())
                 return packages
             }
 

@@ -114,4 +114,7 @@ dependencies {
 
     // Biometrics
     implementation "androidx.biometric:biometric:1.2.0-alpha05"
+
+    // PDFBox-Android (Tom Roush) — on-device PDF text extraction, no network
+    implementation "com.tom-roush:pdfbox-android:2.0.27.0"
 }
