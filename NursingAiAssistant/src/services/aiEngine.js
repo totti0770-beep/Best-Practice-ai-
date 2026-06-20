@@ -98,6 +98,20 @@ Answer:`;
 }
 
 // ---------------------------------------------------------------------------
+// Input sanitisation
+// ---------------------------------------------------------------------------
+
+const MAX_QUERY_LENGTH = 500;
+
+function sanitizeQuery(text) {
+  if (!text) return '';
+  return text
+    .slice(0, MAX_QUERY_LENGTH)
+    .replace(/\r/g, '')
+    .replace(/\n{2,}/g, '\n');
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -114,6 +128,7 @@ Answer:`;
  * }>}
  */
 export async function generateSecureResponse(userQuery, categoryId) {
+  userQuery = sanitizeQuery(userQuery);
   const lang = detectLanguage(userQuery);
 
   // ------------------------------------------------------------------

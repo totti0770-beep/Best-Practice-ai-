@@ -4,18 +4,17 @@
  * Encrypted SQLite database layer for NursingAiAssistant.
  *
  * Uses react-native-sqlite-storage with SQLCipher encryption.
+ * The encryption key is derived at runtime from the Android Keystore
+ * (KeystoreModule native bridge) — the raw key never appears in JS source.
  *
  * Tables:
  *   Categories      — The three knowledge domains (Pharmacy, Policies, Quality)
  *   KnowledgeBase   — Chunked text extracted from uploaded PDFs
  *   AuditLogs       — Immutable audit trail of all significant actions
- *
- * IMPORTANT: The SQLCipher key below is a development placeholder.
- * In production, derive this key from a secure source such as the device
- * Keystore / Secure Enclave and never hardcode it.
  */
 
 import SQLite from 'react-native-sqlite-storage';
+import { NativeModules, Platform } from 'react-native';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -23,16 +22,41 @@ import SQLite from 'react-native-sqlite-storage';
 
 SQLite.enablePromise(true);
 
-/**
- * Development-only encryption key.
- * Replace with a securely generated key before shipping to production.
- */
-const DB_ENCRYPTION_KEY = 'NursingAI_DEV_KEY_2024_REPLACE_IN_PROD';
-
 const DB_NAME = 'nursing_ai.db';
 
 /** Singleton database connection handle */
 let _db = null;
+
+// ---------------------------------------------------------------------------
+// Key derivation (Android Keystore / iOS Secure Enclave)
+// ---------------------------------------------------------------------------
+
+/**
+ * Retrieves the SQLCipher encryption key from the device secure hardware.
+ * On Android: uses KeystoreModule (TEE-backed AES-256-GCM key wrapping).
+ * Falls back to a clearly-labelled dev key in simulators / unit-test env.
+ *
+ * @returns {Promise<string>} hex key string
+ */
+async function getDatabaseKey() {
+  try {
+    if (Platform.OS === 'android' && NativeModules.KeystoreModule) {
+      return await NativeModules.KeystoreModule.getDatabaseKey();
+    }
+    // iOS: implement equivalent via react-native-keychain or SecureEnclave
+    // For now returns a dev key; replace before production iOS build.
+    if (Platform.OS === 'ios') {
+      console.warn('[DB] iOS Keystore integration not yet implemented — using dev key');
+    }
+  } catch (err) {
+    console.error('[DB] Keystore error, falling back to dev key:', err);
+  }
+  // DEV / CI fallback — flagged clearly, never used in production builds
+  if (__DEV__) {
+    return 'dev_key_only_not_for_production_use';
+  }
+  throw new Error('Database key unavailable. Ensure KeystoreModule is registered.');
+}
 
 // ---------------------------------------------------------------------------
 // Connection management
@@ -40,17 +64,18 @@ let _db = null;
 
 /**
  * Returns the open database instance, opening it if necessary.
- * All calls to SQLite must go through this function to ensure that
- * the database is always in an encrypted, initialised state.
+ * Key is derived from secure hardware on first call.
  *
  * @returns {Promise<SQLiteDatabase>}
  */
 export async function getDB() {
   if (_db) return _db;
 
+  const key = await getDatabaseKey();
+
   _db = await SQLite.openDatabase({
     name: DB_NAME,
-    key: DB_ENCRYPTION_KEY,   // SQLCipher encryption key
+    key,
     location: 'default',
   });
 
@@ -182,15 +207,17 @@ export async function getCategories() {
  */
 export async function searchKnowledgeBase(query, categoryId, limit = 3) {
   const db = await getDB();
-  const searchTerm = `%${query}%`;
+  const sanitized = query.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+  const searchTerm = `%${sanitized}%`;
+  const safeLimit = Math.min(Math.max(Number(limit) || 3, 1), 10);
 
   const [result] = await db.executeSql(
     `SELECT content, source_name, page_number
        FROM KnowledgeBase
       WHERE category_id = ?
-        AND content LIKE ?
+        AND content LIKE ? ESCAPE '\\'
       LIMIT ?;`,
-    [categoryId, searchTerm, limit]
+    [categoryId, searchTerm, safeLimit]
   );
 
   const rows = [];

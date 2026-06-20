@@ -6,35 +6,29 @@
  * Responsibilities:
  * 1. Read the chosen PDF file as base64 via react-native-fs.
  * 2. Compute a SHA-256 checksum (integrity verification).
- * 3. Extract page text — see NOTE below about the extraction placeholder.
+ * 3. Extract page text via the native PdfExtractorModule (Apache PDFBox).
  * 4. Split text into overlapping chunks suitable for RAG retrieval.
  * 5. Clean and normalise each chunk (Arabic + Latin character sets).
  * 6. Persist each chunk to the encrypted KnowledgeBase SQLite table.
  * 7. Write an audit log entry for the upload.
  *
  * -------------------------------------------------------------------------
- * NOTE — PDF TEXT EXTRACTION PLACEHOLDER:
+ * PDF TEXT EXTRACTION:
  * -------------------------------------------------------------------------
- * Full native PDF parsing requires a native bridge library such as
- * react-native-pdf-lib, pdf.js (via a WebView bridge), or a custom
- * Android module using Apache PDFBox / iTextPDF.
- *
- * None of these are installed in the current scaffold. The function
- * `extractPagesFromBase64` below SIMULATES page extraction by splitting
- * the raw base64 string into equal segments and labelling them as pages.
- * This allows the rest of the pipeline (chunking, storage, audit) to be
- * tested end-to-end.
- *
- * To replace with real extraction, implement `extractPagesFromBase64`
- * using your chosen PDF library and return an array of { pageNumber, text }
- * objects — the rest of the pipeline will work unchanged.
+ * Real page-by-page text extraction is performed on-device by the native
+ * Android module PdfExtractorModule, which wraps Apache PDFBox (Tom Roush's
+ * Android port). No network access is required, preserving the air-gapped
+ * design. The module resolves with an array of { pageNumber, text } objects.
  * -------------------------------------------------------------------------
  */
 
+import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import CryptoJS from 'crypto-js';
 import { insertKnowledgeChunk } from '../database/db';
 import { addAuditLog } from './auditService';
+
+const { PdfExtractorModule } = NativeModules;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -42,6 +36,7 @@ import { addAuditLog } from './auditService';
 
 const DEFAULT_CHUNK_SIZE = 800;   // Characters per chunk (UTF-16 code units)
 const DEFAULT_OVERLAP = 100;      // Overlap between consecutive chunks
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB hard limit
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -57,6 +52,14 @@ const DEFAULT_OVERLAP = 100;      // Overlap between consecutive chunks
  * @returns {Promise<{checksum: string, chunksInserted: number}>}
  */
 export async function processSecurePDF(fileUri, fileName, categoryId) {
+  // 0. Validate file size before reading into memory ---------------------
+  const stat = await RNFS.stat(fileUri);
+  if (stat.size > MAX_FILE_SIZE) {
+    throw new Error(
+      `File exceeds the ${MAX_FILE_SIZE / (1024 * 1024)}MB size limit.`
+    );
+  }
+
   // 1. Read file as base64 ------------------------------------------------
   const base64Data = await RNFS.readFile(fileUri, 'base64');
   if (!base64Data || base64Data.length === 0) {
@@ -67,8 +70,11 @@ export async function processSecurePDF(fileUri, fileName, categoryId) {
   const checksum = computeChecksum(base64Data);
   await addAuditLog('PDF_READ', `File: ${fileName} | Checksum: ${checksum}`);
 
-  // 3. Extract pages (PLACEHOLDER — see module-level comment) -------------
-  const pages = extractPagesFromBase64(base64Data, fileName);
+  // 3. Extract page text on-device via Apache PDFBox ----------------------
+  const pages = await extractPages(fileUri);
+  if (!pages || pages.length === 0) {
+    throw new Error('No extractable text found in the PDF.');
+  }
 
   // 4–6. Chunk, clean, and store each page --------------------------------
   let chunksInserted = 0;
@@ -117,41 +123,27 @@ function computeChecksum(base64Data) {
 }
 
 /**
- * PLACEHOLDER — Simulates page-by-page text extraction from a PDF.
+ * Extracts page-by-page text from a PDF using the native PdfExtractorModule
+ * (Apache PDFBox on Android). Returns an array of { pageNumber, text } objects.
  *
- * WHY PLACEHOLDER: A native PDF parsing bridge is not yet installed.
- * This function splits the raw base64 payload into equal segments and
- * treats each segment as a "page". This lets the chunking and storage
- * pipeline run end-to-end during development and testing.
- *
- * REPLACE THIS FUNCTION with a real PDF-to-text library before shipping.
- * The return signature (Array<{ pageNumber: number, text: string }>) must
- * be preserved so that the rest of the pipeline works unchanged.
- *
- * @param {string} base64Data  Base64-encoded PDF bytes
- * @param {string} fileName    Used only for the placeholder text label
- * @returns {Array<{pageNumber: number, text: string}>}
+ * @param {string} fileUri  Local file URI / path to the PDF
+ * @returns {Promise<Array<{pageNumber: number, text: string}>>}
+ * @throws {Error} If the native module is unavailable or extraction fails.
  */
-function extractPagesFromBase64(base64Data, fileName) {
-  // Simulate up to 10 pages from the base64 payload.
-  const SIMULATED_PAGE_COUNT = 10;
-  const segmentLength = Math.ceil(base64Data.length / SIMULATED_PAGE_COUNT);
-  const pages = [];
-
-  for (let i = 0; i < SIMULATED_PAGE_COUNT; i++) {
-    const segment = base64Data.slice(i * segmentLength, (i + 1) * segmentLength);
-    // Produce placeholder text that includes the filename and page number so
-    // that the stored chunks are at least traceable in the UI.
-    pages.push({
-      pageNumber: i + 1,
-      text:
-        `[PLACEHOLDER — real PDF extraction not yet implemented] ` +
-        `Source: ${fileName} | Page ${i + 1} | ` +
-        `Data preview: ${segment.slice(0, 120)}`,
-    });
+async function extractPages(fileUri) {
+  if (!PdfExtractorModule || typeof PdfExtractorModule.extractPages !== 'function') {
+    throw new Error(
+      'PDF extraction is unavailable. The native PdfExtractorModule is not ' +
+      'registered — rebuild the Android app after installing the module.'
+    );
   }
 
-  return pages;
+  const pages = await PdfExtractorModule.extractPages(fileUri);
+  // Native returns Array<{ pageNumber, text }>; normalise into plain objects.
+  return (pages || []).map(p => ({
+    pageNumber: p.pageNumber,
+    text: p.text || '',
+  }));
 }
 
 /**
