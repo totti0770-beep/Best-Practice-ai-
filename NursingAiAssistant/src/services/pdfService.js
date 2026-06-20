@@ -42,6 +42,8 @@ import { addAuditLog } from './auditService';
 
 const DEFAULT_CHUNK_SIZE = 800;   // Characters per chunk (UTF-16 code units)
 const DEFAULT_OVERLAP = 100;      // Overlap between consecutive chunks
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB hard limit
+const MAX_QUERY_LENGTH = 500;     // Max characters for search queries
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -57,6 +59,14 @@ const DEFAULT_OVERLAP = 100;      // Overlap between consecutive chunks
  * @returns {Promise<{checksum: string, chunksInserted: number}>}
  */
 export async function processSecurePDF(fileUri, fileName, categoryId) {
+  // 0. Validate file size before reading into memory ---------------------
+  const stat = await RNFS.stat(fileUri);
+  if (stat.size > MAX_FILE_SIZE) {
+    throw new Error(
+      `File exceeds the ${MAX_FILE_SIZE / (1024 * 1024)}MB size limit.`
+    );
+  }
+
   // 1. Read file as base64 ------------------------------------------------
   const base64Data = await RNFS.readFile(fileUri, 'base64');
   if (!base64Data || base64Data.length === 0) {

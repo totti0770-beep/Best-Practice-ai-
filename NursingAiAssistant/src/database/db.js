@@ -207,15 +207,17 @@ export async function getCategories() {
  */
 export async function searchKnowledgeBase(query, categoryId, limit = 3) {
   const db = await getDB();
-  const searchTerm = `%${query}%`;
+  const sanitized = query.replace(/[%_\\]/g, '\\$&').slice(0, 200);
+  const searchTerm = `%${sanitized}%`;
+  const safeLimit = Math.min(Math.max(Number(limit) || 3, 1), 10);
 
   const [result] = await db.executeSql(
     `SELECT content, source_name, page_number
        FROM KnowledgeBase
       WHERE category_id = ?
-        AND content LIKE ?
+        AND content LIKE ? ESCAPE '\\'
       LIMIT ?;`,
-    [categoryId, searchTerm, limit]
+    [categoryId, searchTerm, safeLimit]
   );
 
   const rows = [];
