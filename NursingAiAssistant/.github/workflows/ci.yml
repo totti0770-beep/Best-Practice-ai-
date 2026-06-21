@@ -31,10 +31,13 @@ jobs:
         working-directory: NursingAiAssistant
         run: npm ci
 
+      - name: Security audit
+        working-directory: NursingAiAssistant
+        run: npm audit --audit-level=moderate
+
       - name: Lint
         working-directory: NursingAiAssistant
         run: npx eslint src/ --ext .js --max-warnings 0
-        continue-on-error: true   # Non-blocking until lint rules are finalised
 
       - name: Unit tests
         working-directory: NursingAiAssistant

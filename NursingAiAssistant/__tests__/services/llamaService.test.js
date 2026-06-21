@@ -101,6 +101,19 @@ describe('llamaService', () => {
       mockContext.completion.mockRejectedValue(new Error('CUDA OOM'));
       await expect(getLlamaCompletion('prompt')).rejects.toThrow(/inference failed/i);
     });
+
+    it('throws after 60-second timeout', async () => {
+      jest.useFakeTimers();
+      mockContext.completion.mockReturnValue(new Promise(() => {}));
+
+      await initializeLlama();
+      const promise = getLlamaCompletion('slow prompt');
+
+      jest.advanceTimersByTime(60_000);
+
+      await expect(promise).rejects.toThrow(/timed out/i);
+      jest.useRealTimers();
+    });
   });
 
   describe('releaseLlama', () => {

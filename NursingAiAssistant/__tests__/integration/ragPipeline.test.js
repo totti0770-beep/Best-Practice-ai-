@@ -25,13 +25,12 @@ jest.mock('react-native-fs', () => ({
   stat: jest.fn().mockResolvedValue({ size: 1024 }),
 }));
 
-jest.mock('crypto-js', () => {
-  const HASH = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
-  return {
-    enc: { Base64: { parse: jest.fn(v => v) }, Hex: {} },
-    SHA256: jest.fn(() => ({ toString: () => HASH })),
-  };
-});
+jest.mock('@noble/hashes/sha256', () => ({
+  sha256: jest.fn(() => new Uint8Array(32)),
+}));
+jest.mock('@noble/hashes/utils', () => ({
+  bytesToHex: jest.fn(() => 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'),
+}));
 
 jest.mock('llama.rn', () => ({ initLlama: jest.fn() }));
 

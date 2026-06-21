@@ -13,9 +13,11 @@ jest.mock('react-native-fs', () => ({
   readFile: jest.fn(),
   stat: jest.fn(),
 }));
-jest.mock('crypto-js', () => ({
-  enc: { Base64: { parse: jest.fn(v => v) }, Hex: {} },
-  SHA256: jest.fn(() => ({ toString: () => 'abc123' })),
+jest.mock('@noble/hashes/sha256', () => ({
+  sha256: jest.fn(() => new Uint8Array([0xab, 0xc1, 0x23])),
+}));
+jest.mock('@noble/hashes/utils', () => ({
+  bytesToHex: jest.fn(() => 'abc123'),
 }));
 jest.mock('../../src/database/db', () => ({
   insertKnowledgeChunk: jest.fn().mockResolvedValue(undefined),

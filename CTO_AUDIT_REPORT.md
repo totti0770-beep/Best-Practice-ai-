@@ -86,7 +86,7 @@ The application is **merge-ready** from a code quality and security standpoint. 
 | SEC-03 | MEDIUM | Sentry PII scrubbing doesn't cover breadcrumb data | Advisory; low risk since Sentry is optional |
 | SEC-04 | LOW | Debug keystore committed to repo (standard Android practice) | Acceptable for debug builds |
 | SEC-05 | LOW | No query rate limiting | Low risk on single-device clinical tool |
-| SEC-06 | INFO | crypto-js unmaintained since 2022 | Used for SHA-256 only; consider @noble/hashes |
+| ~~SEC-06~~ | ~~INFO~~ | ~~crypto-js unmaintained since 2022~~ | RESOLVED — replaced with @noble/hashes |
 
 ---
 
@@ -116,7 +116,7 @@ The application is **merge-ready** from a code quality and security standpoint. 
 |---|---|---|
 | PDF extraction is a placeholder | HIGH | Documented; must implement before pilot |
 | GGUF model loading takes 5-30s | MEDIUM | Lazy-load on first chat; consider preloading |
-| No LLM inference timeout | MEDIUM | Add 60s timeout to prevent UI freeze |
+| ~~No LLM inference timeout~~ | ~~MEDIUM~~ | RESOLVED — 60s Promise.race timeout added |
 | Module-level singletons across services | LOW | Appropriate for React Native; tested for reset behavior |
 
 ---
@@ -135,8 +135,8 @@ The application is **merge-ready** from a code quality and security standpoint. 
 
 | Gap | Priority | Effort |
 |---|---|---|
-| No SAST/dependency scanning | P1 | 0.5 day |
-| Lint set to `continue-on-error: true` | P2 | 5 min (change to false) |
+| ~~No SAST/dependency scanning~~ | ~~P1~~ | **DONE** — npm audit --audit-level=moderate added |
+| ~~Lint set to `continue-on-error: true`~~ | ~~P2~~ | **DONE** — ESLint is now blocking |
 | No APK size check | P3 | 0.5 day |
 | No iOS CI job | P3 | Blocked by iOS support |
 
@@ -186,16 +186,16 @@ preserving the air-gapped design. Verified by 4 new unit tests + updated E2E pip
 | # | Gap | Effort |
 |---|---|---|
 | 4 | iOS Keystore integration (react-native-keychain) | 1-2 days |
-| 5 | Add npm audit / SAST to CI pipeline | 0.5 day |
-| 6 | LLM inference timeout (60 seconds) | 2 hours |
+| ~~5~~ | ~~Add npm audit / SAST to CI pipeline~~ | **DONE** |
+| ~~6~~ | ~~LLM inference timeout (60 seconds)~~ | **DONE** |
 
 ### P2 — Should Fix Before Production
 
 | # | Gap | Effort |
 |---|---|---|
 | 7 | FTS5 full-text search index | 1 day |
-| 8 | Replace crypto-js with @noble/hashes | 0.5 day |
-| 9 | Make ESLint blocking in CI | 5 minutes |
+| ~~8~~ | ~~Replace crypto-js with @noble/hashes~~ | **DONE** |
+| ~~9~~ | ~~Make ESLint blocking in CI~~ | **DONE** |
 | 10 | Conditional console logging (suppress in production) | 2 hours |
 
 ### P3 — Nice to Have
@@ -216,12 +216,12 @@ preserving the air-gapped design. Verified by 4 new unit tests + updated E2E pip
 | Code Quality | 8/10 | B+ |
 | Security Posture | 8/10 | B+ |
 | Test Coverage | 8/10 | B+ |
-| Architecture | 7/10 | B |
-| CI/CD | 7/10 | B |
+| Architecture | 8/10 | B+ |
+| CI/CD | 8/10 | B+ |
 | i18n / Accessibility | 9/10 | A- |
 | Documentation | 8/10 | B+ |
 | Production Readiness | 5/10 | C |
-| **OVERALL** | **7.5/10** | **B+** |
+| **OVERALL** | **7.8/10** | **B+** |
 
 ---
 
@@ -233,6 +233,6 @@ preserving the air-gapped design. Verified by 4 new unit tests + updated E2E pip
 
 ---
 
-*Report generated: 2026-06-20*
-*Branch: claude/implement-todo-item-aTMkE (commit 14eecd9)*
-*PR: #5 → main*
+*Report generated: 2026-06-21 (updated)*
+*Branch: claude/implement-todo-item-aTMkE*
+*Previous PR: #5 → main (merged)*
