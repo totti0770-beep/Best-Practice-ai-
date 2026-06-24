@@ -24,7 +24,8 @@
 
 import { NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
-import CryptoJS from 'crypto-js';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils';
 import { insertKnowledgeChunk } from '../database/db';
 import { addAuditLog } from './auditService';
 
@@ -118,8 +119,8 @@ export async function processSecurePDF(fileUri, fileName, categoryId) {
  * @returns {string} Hex-encoded hash
  */
 function computeChecksum(base64Data) {
-  const wordArray = CryptoJS.enc.Base64.parse(base64Data);
-  return CryptoJS.SHA256(wordArray).toString(CryptoJS.enc.Hex);
+  const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+  return bytesToHex(sha256(bytes));
 }
 
 /**

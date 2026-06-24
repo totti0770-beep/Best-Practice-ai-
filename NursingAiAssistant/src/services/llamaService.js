@@ -53,6 +53,8 @@ const COMPLETION_PARAMS = {
   stop: ['</s>', 'Human:', 'User:'],
 };
 
+const INFERENCE_TIMEOUT_MS = 60_000; // 60-second safety net
+
 // ---------------------------------------------------------------------------
 // Singleton context
 // ---------------------------------------------------------------------------
@@ -116,10 +118,16 @@ export async function getLlamaCompletion(prompt) {
   }
 
   try {
-    const result = await llamaContext.completion({
+    let timer;
+    const completionPromise = llamaContext.completion({
       prompt,
       ...COMPLETION_PARAMS,
     });
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('LLM inference timed out after 60 seconds.')), INFERENCE_TIMEOUT_MS);
+    });
+    const result = await Promise.race([completionPromise, timeoutPromise])
+      .finally(() => clearTimeout(timer));
 
     // llama.rn returns an object with a `text` property containing the reply.
     const text = (result?.text ?? '').trim();

@@ -21,7 +21,7 @@
     "react-native-biometrics": "^3.0.1",
     "react-native-document-picker": "^9.1.1",
     "react-native-fs": "^2.20.0",
-    "crypto-js": "^4.2.0",
+    "@noble/hashes": "^1.7.1",
     "i18next": "^23.7.6",
     "react-i18next": "^14.0.0",
     "react-native-localize": "^3.0.6",
