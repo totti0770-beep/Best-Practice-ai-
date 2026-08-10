@@ -1,0 +1,25 @@
+{
+  "name": "cnpv-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "build:web": "npm run build --workspace=apps/web",
+    "migrate": "npm run migration:run --workspace=apps/backend",
+    "seed": "npm run seed --workspace=apps/backend",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v && docker compose up -d"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "prettier": "^3.3.0",
+    "eslint": "^8.57.0"
+  }
+}
