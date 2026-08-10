@@ -91,6 +91,7 @@ describe('database/db', () => {
       expect(sqlStatements.some(s => s.includes('Categories'))).toBe(true);
       expect(sqlStatements.some(s => s.includes('KnowledgeBase'))).toBe(true);
       expect(sqlStatements.some(s => s.includes('AuditLogs'))).toBe(true);
+      expect(sqlStatements.some(s => s.includes('AppSettings'))).toBe(true);
     });
 
     it('seeds categories when table is empty', async () => {
@@ -229,6 +230,61 @@ describe('database/db', () => {
       const params = mockExecuteSql.mock.calls[0][1];
       const timestamp = params[params.length - 1];
       expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+  });
+
+  describe('getSetting', () => {
+    it('returns null when the key is unset', async () => {
+      mockExecuteSql.mockResolvedValue([{
+        rows: { length: 0, item: () => null },
+      }]);
+
+      const { getSetting } = require('../../src/database/db');
+      const value = await getSetting('disclaimer_accepted_v1');
+
+      expect(value).toBeNull();
+      expect(mockExecuteSql).toHaveBeenCalledWith(
+        expect.stringContaining('FROM AppSettings'),
+        ['disclaimer_accepted_v1']
+      );
+    });
+
+    it('returns the stored value when the key exists', async () => {
+      mockExecuteSql.mockResolvedValue([{
+        rows: { length: 1, item: () => ({ value: '2026-08-10T09:00:00.000Z' }) },
+      }]);
+
+      const { getSetting } = require('../../src/database/db');
+      const value = await getSetting('disclaimer_accepted_v1');
+
+      expect(value).toBe('2026-08-10T09:00:00.000Z');
+    });
+  });
+
+  describe('setSetting', () => {
+    it('upserts the key with an ISO updated_at', async () => {
+      mockExecuteSql.mockResolvedValue([{ rowsAffected: 1 }]);
+
+      const { setSetting } = require('../../src/database/db');
+      await setSetting('disclaimer_accepted_v1', '2026-08-10T09:00:00.000Z');
+
+      const [sql, params] = mockExecuteSql.mock.calls[0];
+      expect(sql).toContain('INSERT INTO AppSettings');
+      expect(sql).toContain('ON CONFLICT(key) DO UPDATE');
+      expect(params[0]).toBe('disclaimer_accepted_v1');
+      expect(params[1]).toBe('2026-08-10T09:00:00.000Z');
+      expect(params[2]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+
+    it('overwrites an existing key on repeat set', async () => {
+      mockExecuteSql.mockResolvedValue([{ rowsAffected: 1 }]);
+
+      const { setSetting } = require('../../src/database/db');
+      await setSetting('k', 'first');
+      await setSetting('k', 'second');
+
+      expect(mockExecuteSql).toHaveBeenCalledTimes(2);
+      expect(mockExecuteSql.mock.calls[1][1][1]).toBe('second');
     });
   });
 });

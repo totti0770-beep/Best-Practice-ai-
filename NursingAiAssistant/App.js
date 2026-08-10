@@ -25,13 +25,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { initI18n } from './src/i18n';
-import { initDB } from './src/database/db';
+import { initDB, getSetting } from './src/database/db';
 import { COLORS } from './src/styles/colors';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import AdminScreen from './src/screens/AdminScreen';
 import AuditScreen from './src/screens/AuditScreen';
+import DisclaimerScreen, { DISCLAIMER_KEY } from './src/screens/DisclaimerScreen';
 
 const Stack = createStackNavigator();
 
@@ -53,6 +54,9 @@ const darkTheme = {
 
 export default function App() {
   const [ready, setReady] = useState(false);
+  // Defaults to false so that any failure below leaves the disclaimer in
+  // place — the safety notice must never be skipped because of an error.
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   useEffect(() => {
     async function bootstrap() {
@@ -62,6 +66,11 @@ export default function App() {
 
         // 2. Open / create the encrypted SQLite database and seed categories
         await initDB();
+
+        // 3. Resolve whether the clinical disclaimer was already acknowledged.
+        //    Read before `ready` flips so Home never flashes behind it.
+        const acceptedAt = await getSetting(DISCLAIMER_KEY);
+        setDisclaimerAccepted(Boolean(acceptedAt));
       } catch (err) {
         // Non-fatal during development — log and continue so the app is still
         // usable even when the device cannot initialise the database.
@@ -91,7 +100,7 @@ export default function App() {
         />
         <NavigationContainer theme={darkTheme}>
           <Stack.Navigator
-            initialRouteName="Home"
+            initialRouteName={disclaimerAccepted ? 'Home' : 'Disclaimer'}
             screenOptions={{
               headerShown: false,
               cardStyle: { backgroundColor: COLORS.background },
@@ -99,6 +108,12 @@ export default function App() {
               gestureDirection: I18nManager.isRTL ? 'horizontal-inverted' : 'horizontal',
             }}
           >
+            <Stack.Screen
+              name="Disclaimer"
+              component={DisclaimerScreen}
+              // Blocking notice — no swipe-back past it
+              options={{ gestureEnabled: false }}
+            />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="Admin" component={AdminScreen} />

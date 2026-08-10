@@ -135,6 +135,19 @@ export async function initDB() {
         session_id TEXT
       );
     `);
+
+    // ------------------------------------------------------------------
+    // AppSettings table — key/value store for small persistent flags
+    // (e.g. clinical disclaimer acceptance). Avoids pulling in a separate
+    // AsyncStorage dependency for a handful of values.
+    // ------------------------------------------------------------------
+    tx.executeSql(`
+      CREATE TABLE IF NOT EXISTS AppSettings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
   });
 
   // Seed categories on first run (idempotent)
@@ -247,5 +260,46 @@ export async function insertKnowledgeChunk({ categoryId, content, sourceName, pa
        (category_id, content, source_name, page_number, checksum, created_at)
      VALUES (?, ?, ?, ?, ?, ?);`,
     [categoryId, content, sourceName, pageNumber, checksum, createdAt]
+  );
+}
+
+// ---------------------------------------------------------------------------
+// App settings (key/value)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads a single setting value.
+ *
+ * @param {string} key
+ * @returns {Promise<string|null>} The stored value, or null when unset.
+ */
+export async function getSetting(key) {
+  const db = await getDB();
+  const [result] = await db.executeSql(
+    'SELECT value FROM AppSettings WHERE key = ? LIMIT 1;',
+    [String(key)]
+  );
+
+  if (result.rows.length === 0) return null;
+  return result.rows.item(0).value;
+}
+
+/**
+ * Writes a setting value, overwriting any existing entry for the same key.
+ *
+ * @param {string} key
+ * @param {string} value
+ * @returns {Promise<void>}
+ */
+export async function setSetting(key, value) {
+  const db = await getDB();
+  const updatedAt = new Date().toISOString();
+
+  await db.executeSql(
+    `INSERT INTO AppSettings (key, value, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+                                    updated_at = excluded.updated_at;`,
+    [String(key), String(value), updatedAt]
   );
 }

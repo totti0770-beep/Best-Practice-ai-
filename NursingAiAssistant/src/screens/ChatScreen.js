@@ -120,6 +120,13 @@ export default function ChatScreen({ route, navigation }) {
             </View>
           ) : null}
 
+          {/* Standing reminder that answers are decision support, not orders */}
+          {!isUser ? (
+            <Text style={[styles.safetyFooter, { textAlign: isRTL ? 'right' : 'left' }]}>
+              {t('chat.safetyFooter')}
+            </Text>
+          ) : null}
+
           <Text style={[styles.time, { textAlign: isUser ? (isRTL ? 'left' : 'right') : (isRTL ? 'right' : 'left') }]}>
             {item.time}
           </Text>
@@ -264,6 +271,13 @@ const styles = StyleSheet.create({
     fontFamily: getFontFamily('Bold'),
     fontSize: 11,
     flexShrink: 1,
+  },
+  safetyFooter: {
+    color: COLORS.textDim,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 6,
+    fontFamily: getFontFamily('Regular'),
   },
   time: {
     color: COLORS.textDim,
