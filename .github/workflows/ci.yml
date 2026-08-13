@@ -93,9 +93,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Generate debug keystore
+      # android/app/debug.keystore is committed to the repo, so generating one
+      # here fails with "alias <androiddebugkey> already exists". Only create
+      # it when it is genuinely absent.
+      - name: Ensure debug keystore exists
         working-directory: NursingAiAssistant/android/app
         run: |
+          if [ -f debug.keystore ]; then
+            echo "debug.keystore is committed to the repository; reusing it."
+            exit 0
+          fi
           keytool -genkeypair \
             -keystore debug.keystore \
             -storepass android \
