@@ -10,7 +10,11 @@ APP_NAME="Gradle"
 ##############################################################################
 # JVM options
 ##############################################################################
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+# Must not contain embedded quotes: the expansion below is intentionally
+# unquoted so it word-splits into separate arguments. With quotes inside the
+# value, java receives the literal string "-Xmx64m" and reports
+# 'Could not find or load main class "-Xmx64m"'.
+DEFAULT_JVM_OPTS="-Xmx64m -Xms64m"
 
 JAVACMD=${JAVA_HOME:+$JAVA_HOME/bin/java}
 JAVACMD=${JAVACMD:-java}

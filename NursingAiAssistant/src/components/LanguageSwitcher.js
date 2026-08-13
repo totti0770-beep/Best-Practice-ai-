@@ -9,7 +9,6 @@
 
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { I18nManager } from 'react-native';
 import RNRestart from 'react-native-restart';
 import { useTranslation } from 'react-i18next';
 

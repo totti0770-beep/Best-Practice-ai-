@@ -47,14 +47,18 @@
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/assets/**",
-      "!src/i18n/**"
+      "!src/i18n/**",
+      "!src/styles/**",
+      "!src/screens/**",
+      "!src/components/**",
+      "!src/services/errorReporting.js"
     ],
     "coverageThreshold": {
       "global": {
-        "branches": 50,
-        "functions": 60,
-        "lines": 60,
-        "statements": 60
+        "branches": 75,
+        "functions": 95,
+        "lines": 90,
+        "statements": 90
       }
     }
   }

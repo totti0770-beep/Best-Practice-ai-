@@ -118,9 +118,65 @@ export async function processSecurePDF(fileUri, fileName, categoryId) {
  * @param {string} base64Data
  * @returns {string} Hex-encoded hash
  */
-function computeChecksum(base64Data) {
-  const bytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-  return bytesToHex(sha256(bytes));
+const B64_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+/**
+ * Decodes a base64 string into raw bytes.
+ *
+ * Implemented locally on purpose: React Native 0.73 does not expose a global
+ * `atob` (it landed in core only in later versions), so relying on it would
+ * throw a ReferenceError on device while still passing under Node in Jest.
+ *
+ * @param {string} base64Data Base64 input, with or without `=` padding
+ * @returns {Uint8Array} Decoded bytes
+ * @throws {Error} If the input contains characters outside the base64 alphabet
+ */
+export function base64ToBytes(base64Data) {
+  if (typeof base64Data !== 'string') {
+    throw new Error('base64ToBytes: input must be a string');
+  }
+
+  const clean = base64Data.replace(/[\r\n\s]/g, '').replace(/[=]+$/, '');
+  if (clean.length % 4 === 1) {
+    throw new Error('base64ToBytes: malformed base64 input');
+  }
+
+  const bytes = new Uint8Array(Math.floor((clean.length * 3) / 4));
+  let byteIndex = 0;
+  let buffer = 0;
+  let bitsCollected = 0;
+
+  /* eslint-disable no-bitwise -- base64 decoding is inherently bit-oriented */
+  for (let i = 0; i < clean.length; i++) {
+    const value = B64_ALPHABET.indexOf(clean[i]);
+    if (value === -1) {
+      throw new Error(
+        `base64ToBytes: invalid base64 character "${clean[i]}" at index ${i}`
+      );
+    }
+
+    buffer = (buffer << 6) | value;
+    bitsCollected += 6;
+
+    if (bitsCollected >= 8) {
+      bitsCollected -= 8;
+      bytes[byteIndex++] = (buffer >> bitsCollected) & 0xff;
+    }
+  }
+  /* eslint-enable no-bitwise */
+
+  return bytes.subarray(0, byteIndex);
+}
+
+/**
+ * Computes a SHA-256 hex digest of a base64-encoded string.
+ *
+ * @param {string} base64Data
+ * @returns {string} Hex-encoded hash
+ */
+export function computeChecksum(base64Data) {
+  return bytesToHex(sha256(base64ToBytes(base64Data)));
 }
 
 /**
